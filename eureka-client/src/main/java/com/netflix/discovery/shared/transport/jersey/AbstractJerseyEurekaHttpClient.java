@@ -47,6 +47,7 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         String urlPath = "apps/" + info.getAppName();
         ClientResponse response = null;
         try {
+            // 利用 jersey 客户端发送 post 请求
             Builder resourceBuilder = jerseyClient.resource(serviceUrl).path(urlPath).getRequestBuilder();
             addExtraHeaders(resourceBuilder);
             response = resourceBuilder
@@ -162,6 +163,7 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
 
     @Override
     public EurekaHttpResponse<Applications> getApplications(String... regions) {
+        // /apps 的请求封装
         return getApplicationsInternal("apps/", regions);
     }
 
@@ -184,6 +186,7 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         ClientResponse response = null;
         String regionsParamValue = null;
         try {
+            // 利用 jersey 客户端发送 get 请求
             WebResource webResource = jerseyClient.resource(serviceUrl).path(urlPath);
             if (regions != null && regions.length > 0) {
                 regionsParamValue = StringUtil.join(regions);

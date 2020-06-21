@@ -198,13 +198,14 @@ public class ApplicationInfoManager {
      * see {@link InstanceInfo#getHostName()} for explanation on why the hostname is used as the default address
      */
     public void refreshDataCenterInfoIfRequired() {
+        // 当前注册中心地址（ip）
         String existingAddress = instanceInfo.getHostName();
 
         String existingSpotInstanceAction = null;
         if (instanceInfo.getDataCenterInfo() instanceof AmazonInfo) {
             existingSpotInstanceAction = ((AmazonInfo) instanceInfo.getDataCenterInfo()).get(AmazonInfo.MetaDataKey.spotInstanceAction);
         }
-
+        // 更新后的注册中心地址（ip），大多数情况下不会更新
         String newAddress;
         if (config instanceof RefreshableInstanceConfig) {
             // Refresh data center info, and return up to date address
@@ -213,7 +214,7 @@ public class ApplicationInfoManager {
             newAddress = config.getHostName(true);
         }
         String newIp = config.getIpAddress();
-
+        // 如果两者不一致，说明注册中心地址改变了，client 端需要更新
         if (newAddress != null && !newAddress.equals(existingAddress)) {
             logger.warn("The address changed from : {} => {}", existingAddress, newAddress);
             updateInstanceInfo(newAddress, newIp);
