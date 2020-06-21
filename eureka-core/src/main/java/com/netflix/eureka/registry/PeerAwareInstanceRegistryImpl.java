@@ -401,11 +401,15 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      */
     @Override
     public void register(final InstanceInfo info, final boolean isReplication) {
+        // eureka 服务器在接收到实例的最后一次发出的心跳后，需要等待多久才可以将此实例删除，默认为 90 秒
         int leaseDuration = Lease.DEFAULT_DURATION_IN_SECS;
         if (info.getLeaseInfo() != null && info.getLeaseInfo().getDurationInSecs() > 0) {
+            // 这里会被 client 端发送过来的 InstanceInfo 数据强制改掉
             leaseDuration = info.getLeaseInfo().getDurationInSecs();
         }
+        // 注册 client
         super.register(info, leaseDuration, isReplication);
+        // 向集群中的其他节点发送数据
         replicateToPeers(Action.Register, info.getAppName(), info.getId(), info, null, isReplication);
     }
 
@@ -628,9 +632,11 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
 
             for (final PeerEurekaNode node : peerEurekaNodes.getPeerEurekaNodes()) {
                 // If the url represents this host, do not replicate to yourself.
+                // 排除自己
                 if (peerEurekaNodes.isThisMyUrl(node.getServiceUrl())) {
                     continue;
                 }
+                // 向集群中的节点同步信息
                 replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node);
             }
         } finally {
