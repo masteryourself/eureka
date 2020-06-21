@@ -1095,6 +1095,7 @@ public class DiscoveryClient implements EurekaClient {
         if (apps == null) {
             logger.error("The application is null for some reason. Not storing this information");
         } else if (fetchRegistryGeneration.compareAndSet(currentUpdateGeneration, currentUpdateGeneration + 1)) {
+            // 存储到本地
             localRegionApps.set(this.filterAndShuffle(apps));
             logger.debug("Got full registry with apps hashcode {}", apps.getAppsHashCode());
         } else {
@@ -1361,15 +1362,19 @@ public class DiscoveryClient implements EurekaClient {
     }
 
     private void cancelScheduledTasks() {
+        // 取消实例信息复制器
         if (instanceInfoReplicator != null) {
             instanceInfoReplicator.stop();
         }
+        // 取消心跳定时任务
         if (heartbeatExecutor != null) {
             heartbeatExecutor.shutdownNow();
         }
+        // 取消刷新定时任务
         if (cacheRefreshExecutor != null) {
             cacheRefreshExecutor.shutdownNow();
         }
+        // 取消总的定时任务
         if (scheduler != null) {
             scheduler.shutdownNow();
         }
