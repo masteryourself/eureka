@@ -134,11 +134,11 @@ public class PeerEurekaNode {
     public void register(final InstanceInfo info) throws Exception {
         // 获取过期时间
         long expiryTime = System.currentTimeMillis() + getLeaseRenewalOf(info);
-        // 需要在过期时间之前完成这个任务
         batchingDispatcher.process(
                 taskId("register", info),
                 new InstanceReplicationTask(targetHost, Action.Register, info, null, true) {
                     public EurekaHttpResponse<Void> execute() {
+                        // 在过期时间之前需要完成 register() 任务
                         return replicationClient.register(info);
                     }
                 },
@@ -163,6 +163,7 @@ public class PeerEurekaNode {
                 new InstanceReplicationTask(targetHost, Action.Cancel, appName, id) {
                     @Override
                     public EurekaHttpResponse<Void> execute() {
+                        // 在过期时间之前需要完成 cancel() 任务
                         return replicationClient.cancel(appName, id);
                     }
 
@@ -196,6 +197,7 @@ public class PeerEurekaNode {
     public void heartbeat(final String appName, final String id,
                           final InstanceInfo info, final InstanceStatus overriddenStatus,
                           boolean primeConnection) throws Throwable {
+        // 判断是否是第一次
         if (primeConnection) {
             // We do not care about the result for priming request.
             replicationClient.sendHeartBeat(appName, id, info, overriddenStatus);
@@ -226,6 +228,7 @@ public class PeerEurekaNode {
             }
         };
         long expiryTime = System.currentTimeMillis() + getLeaseRenewalOf(info);
+        // 在过期时间之前需要完成 sendHeartBeat() 任务
         batchingDispatcher.process(taskId("heartbeat", info), replicationTask, expiryTime);
     }
 

@@ -108,7 +108,9 @@ public class InstanceResource {
             @QueryParam("overriddenstatus") String overriddenStatus,
             @QueryParam("status") String status,
             @QueryParam("lastDirtyTimestamp") String lastDirtyTimestamp) {
+        // isReplication 表示是否是复制，true 表示是 eureka server 之间的 replicate 复制请求
         boolean isFromReplicaNode = "true".equals(isReplication);
+        // renew 续约
         boolean isSuccess = registry.renew(app.getName(), id, isFromReplicaNode);
 
         // Not found in the registry, immediately ask for a register
@@ -278,6 +280,7 @@ public class InstanceResource {
     public Response cancelLease(
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication) {
         try {
+            // 服务下线处理
             boolean isSuccess = registry.cancel(app.getName(), id,
                 "true".equals(isReplication));
 

@@ -75,6 +75,10 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AbstractInstanceRegistry.class);
 
     private static final String[] EMPTY_STR_ARRAY = new String[0];
+    /**
+     * 注册中心，key 是应用名称, value 是应用名称对应的所有实例集合
+     * value 又是一个 map, key 是 instanceId, value 是其对应的 Lease<InstanceInfo> 信息
+     */
     private final ConcurrentHashMap<String, Map<String, Lease<InstanceInfo>>> registry
             = new ConcurrentHashMap<String, Map<String, Lease<InstanceInfo>>>();
     protected Map<String, RemoteRegionRegistry> regionNameVSRemoteRegistry = new HashMap<String, RemoteRegionRegistry>();
@@ -307,14 +311,17 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         try {
             read.lock();
             CANCEL.increment(isReplication);
+            // 获取服务对应的实例信息
             Map<String, Lease<InstanceInfo>> gMap = registry.get(appName);
             Lease<InstanceInfo> leaseToCancel = null;
             if (gMap != null) {
+                // 服务下线，从注册中心上移除
                 leaseToCancel = gMap.remove(id);
             }
             synchronized (recentCanceledQueue) {
                 recentCanceledQueue.add(new Pair<Long, String>(System.currentTimeMillis(), appName + "(" + id + ")"));
             }
+            // 从状态 map 中删除
             InstanceStatus instanceStatus = overriddenInstanceStatusMap.remove(id);
             if (instanceStatus != null) {
                 logger.debug("Removed instance id {} from the overridden map which has value {}", id, instanceStatus.name());
@@ -324,6 +331,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 logger.warn("DS: Registry: cancel failed because Lease is not registered for: {}/{}", appName, id);
                 return false;
             } else {
+                // 处理失效时间为当前时间
                 leaseToCancel.cancel();
                 InstanceInfo instanceInfo = leaseToCancel.getHolder();
                 String vip = null;
@@ -352,9 +360,11 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
      */
     public boolean renew(String appName, String id, boolean isReplication) {
         RENEW.increment(isReplication);
+        // 获取注册中心对应的应用集合信息
         Map<String, Lease<InstanceInfo>> gMap = registry.get(appName);
         Lease<InstanceInfo> leaseToRenew = null;
         if (gMap != null) {
+            // 获取其对应的 Lease 信息
             leaseToRenew = gMap.get(id);
         }
         if (leaseToRenew == null) {
@@ -362,6 +372,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
             logger.warn("DS: Registry: lease doesn't exist, registering resource: {} - {}", appName, id);
             return false;
         } else {
+            // 获取当前持有者
             InstanceInfo instanceInfo = leaseToRenew.getHolder();
             if (instanceInfo != null) {
                 // touchASGCache(instanceInfo.getASGName());
@@ -379,11 +390,14 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                                     + "Hence setting the status to overridden status", instanceInfo.getStatus().name(),
                                     instanceInfo.getOverriddenStatus().name(),
                                     instanceInfo.getId());
+                    // 设置状态信息
                     instanceInfo.setStatusWithoutDirty(overriddenInstanceStatus);
 
                 }
             }
+            // 计数器 +1
             renewsLastMin.increment();
+            // 更新最后修改时间
             leaseToRenew.renew();
             return true;
         }

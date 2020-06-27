@@ -374,7 +374,9 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
     @Override
     public boolean cancel(final String appName, final String id,
                           final boolean isReplication) {
+        // 调用父类的方法完成下线，更新状态和最后修改时间
         if (super.cancel(appName, id, isReplication)) {
+            // 向集群中的其他节点完成复制请求
             replicateToPeers(Action.Cancel, appName, id, null, null, isReplication);
             synchronized (lock) {
                 if (this.expectedNumberOfClientsSendingRenews > 0) {
@@ -409,7 +411,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
         }
         // 注册 client
         super.register(info, leaseDuration, isReplication);
-        // 向集群中的其他节点发送数据
+        // 向集群中的其他节点完成复制请求
         replicateToPeers(Action.Register, info.getAppName(), info.getId(), info, null, isReplication);
     }
 
@@ -420,7 +422,9 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * java.lang.String, long, boolean)
      */
     public boolean renew(final String appName, final String id, final boolean isReplication) {
+        // 调用父类的方法完成续约
         if (super.renew(appName, id, isReplication)) {
+            // 向集群中的其他节点完成复制请求
             replicateToPeers(Action.Heartbeat, appName, id, null, null, isReplication);
             return true;
         }
@@ -657,14 +661,17 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             CurrentRequestVersion.set(Version.V2);
             switch (action) {
                 case Cancel:
+                    // 服务下线
                     node.cancel(appName, id);
                     break;
                 case Heartbeat:
+                    // 续约，发送心跳
                     InstanceStatus overriddenStatus = overriddenInstanceStatusMap.get(id);
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
                     node.heartbeat(appName, id, infoFromRegistry, overriddenStatus, false);
                     break;
                 case Register:
+                    // 注册操作
                     node.register(info);
                     break;
                 case StatusUpdate:
